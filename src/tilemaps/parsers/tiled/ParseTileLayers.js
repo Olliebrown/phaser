@@ -35,19 +35,25 @@ var ParseTileLayers = function (json, insertNull)
 
         var curl = json.layers[i];
 
-        // Base64 decode data if necessary. NOTE: uncompressed base64 only.
-        if (curl.compression)
+        // Base64 decode data if necessary (possibly decompressing).
+        if (curl.encoding && curl.encoding === 'base64')
         {
-            console.warn(
-                'TilemapParser.parseTiledJSON - Layer compression is unsupported, skipping layer \''
-                + curl.name + '\''
-            );
-            continue;
-        }
-        else if (curl.encoding && curl.encoding === 'base64')
-        {
-            curl.data = Base64Decode(curl.data);
+            var decodedData = Base64Decode(curl.data, curl.compression);
             delete curl.encoding; // Allow the same map to be parsed multiple times
+
+            // Detect decoding errors
+            if (decodedData === null)
+            {
+                console.warn(
+                    'TilemapParser.parseTiledJSON - Layer could not be decoded, skipping layer \''
+                    + curl.name + '\''
+                );
+                continue;
+            }
+            else
+            {
+                curl.data = decodedData;
+            }
         }
 
         //  This is an array containing the tile indexes, one after the other. -1 = no tile,
